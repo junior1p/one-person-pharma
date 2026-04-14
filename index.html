@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>一台电脑，一人AI药企 — 从零搭建生物计算与湿实验闭环</title>
+<meta name="description" content="2025年，一个人坐在咖啡馆里，用一台笔记本，可以完成过去需要一支20人团队、一间湿实验室、数千万资金才能做到的事情。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg-deep:#F7F9FC;
+  --bg-surface:#EEF2F8;
+  --bg-card:#fff;
+  --text-primary:#0F1923;
+  --text-secondary:#4A5568;
+  --text-dim:#94A3B8;
+  --accent:#1B6CA8;
+  --accent-bright:#0D4F8A;
+  --accent-glow:rgba(27,108,168,.07);
+  --accent-light:#D6E8F7;
+  --accent-2:#2DAD7C;
+  --accent-2-light:#D1F5E9;
+  --accent-warn:#E88C30;
+  --serif:'Instrument Serif',Georgia,serif;
+  --sans:'DM Sans',-apple-system,sans-serif;
+  --mono:'JetBrains Mono',monospace;
+  --max-w:780px;
+  --wide-w:1080px;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.04),0 1px 2px rgba(0,0,0,.03);
+  --shadow-md:0 4px 16px rgba(27,108,168,.06),0 2px 6px rgba(0,0,0,.04);
+  --shadow-lg:0 12px 40px rgba(27,108,168,.08),0 4px 12px rgba(0,0,0,.04);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:17px;scroll-behavior:smooth;-webkit-font-smoothing:antialiased}
+body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--sans);line-height:1.72;font-weight:370;overflow-x:hidden}
+::selection{background:#D6E8F7;color:#0D4F8A}
+
+/* Scroll progress bar */
+.scroll-progress{position:fixed;top:0;left:0;width:0%;height:3px;background:linear-gradient(90deg,#1B6CA8,#2DAD7C,#E88C30,#1B6CA8);background-size:200% 100%;animation:shimmerBar 3s ease infinite;z-index:9999}
+@keyframes shimmerBar{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+
+/* Navigation */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:.8rem clamp(1.5rem,5vw,3rem);display:flex;align-items:center;justify-content:space-between;background:rgba(247,249,252,.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid rgba(27,108,168,.06);transition:all .3s}
+nav .nav-brand{font-family:var(--mono);font-size:.8rem;font-weight:500;color:var(--accent);text-decoration:none;letter-spacing:.05em}
+nav .nav-links{display:flex;gap:2rem;list-style:none}
+nav .nav-links a{font-size:.82rem;color:var(--text-secondary);text-decoration:none;font-weight:400;transition:color .2s}
+nav .nav-links a:hover{color:var(--accent)}
+@media(max-width:600px){nav .nav-links{display:none}}
+
+/* Hero */
+.hero{position:relative;min-height:100vh;display:flex;flex-direction:column;justify-content:flex-end;padding:0 clamp(1.5rem,5vw,4rem) 5rem;overflow:hidden;background:#fff}
+.hero::before{content:'';position:absolute;inset:0;background:
+  radial-gradient(ellipse 80% 60% at 75% 10%,rgba(27,108,168,.08) 0%,transparent 60%),
+  radial-gradient(ellipse 50% 50% at 10% 80%,rgba(45,173,124,.08) 0%,transparent 55%),
+  radial-gradient(ellipse 40% 40% at 90% 85%,rgba(232,140,48,.06) 0%,transparent 50%);
+  z-index:0}
+.hero-grid{position:absolute;inset:0;
+  background-image:radial-gradient(circle,rgba(27,108,168,.05) 1px,transparent 1px);
+  background-size:32px 32px;
+  mask-image:radial-gradient(ellipse 80% 70% at 50% 40%,black 10%,transparent 70%);
+  -webkit-mask-image:radial-gradient(ellipse 80% 70% at 50% 40%,black 10%,transparent 70%);
+  z-index:0}
+.hero-content{position:relative;z-index:1;max-width:var(--wide-w);margin:0 auto;width:100%}
+.hero-label{font-family:var(--mono);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:1.8rem;opacity:0;animation:fadeUp .8s ease-out .2s forwards}
+.hero-title{font-family:var(--serif);font-size:clamp(2.8rem,6.5vw,5.5rem);line-height:1.06;font-weight:400;color:var(--text-primary);max-width:18ch;margin-bottom:1.8rem;opacity:0;animation:fadeUp .9s ease-out .35s forwards}
+.hero-title em{font-style:italic;color:var(--accent)}
+.hero-sub{font-size:1.1rem;color:var(--text-secondary);max-width:58ch;line-height:1.68;margin-bottom:2.5rem;opacity:0;animation:fadeUp .9s ease-out .5s forwards}
+.hero-buttons{display:flex;gap:.85rem;flex-wrap:wrap;margin-bottom:3rem;opacity:0;animation:fadeUp .8s ease-out .6s forwards}
+.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.7rem 1.5rem;border-radius:8px;font-family:var(--sans);font-size:.88rem;font-weight:500;text-decoration:none;transition:all .25s ease;cursor:pointer;border:none}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-bright);transform:translateY(-2px);box-shadow:0 8px 28px rgba(27,108,168,.25)}
+.btn-secondary{background:rgba(27,108,168,.06);color:var(--text-primary);border:1px solid rgba(27,108,168,.2)}
+.btn-secondary:hover{background:rgba(27,108,168,.11);border-color:rgba(27,108,168,.35);transform:translateY(-1px)}
+
+.hero-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1.5rem;max-width:640px;opacity:0;animation:fadeUp .9s ease-out .8s forwards}
+.stat-card{background:var(--bg-surface);border-radius:12px;padding:1.2rem 1.4rem;border:1px solid rgba(27,108,168,.07)}
+.stat-card .stat-num{font-family:var(--serif);font-size:1.9rem;font-weight:400;color:var(--accent);line-height:1}
+.stat-card .stat-num.green{color:var(--accent-2)}
+.stat-card .stat-num.orange{color:var(--accent-warn)}
+.stat-card .stat-label{font-size:.78rem;color:var(--text-dim);margin-top:.4rem;font-family:var(--mono);letter-spacing:.03em}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+
+/* Sections */
+.section{padding:6rem clamp(1.5rem,5vw,4rem);max-width:var(--wide-w);margin:0 auto}
+.section-label{font-family:var(--mono);font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-bottom:1rem;opacity:.8}
+.section-title{font-family:var(--serif);font-size:clamp(1.8rem,4vw,2.8rem);line-height:1.15;font-weight:400;margin-bottom:1.2rem}
+.section-sub{font-size:1rem;color:var(--text-secondary);max-width:58ch;line-height:1.7}
+
+.section-num{font-family:var(--serif);font-size:clamp(5rem,12vw,9rem);font-weight:400;color:var(--bg-surface);line-height:1;margin-bottom:-1rem;user-select:none}
+.section-num-wrapper{position:relative}
+
+/* Cards */
+.card{background:var(--bg-card);border-radius:14px;padding:1.5rem 1.8rem;border:1px solid rgba(27,108,168,.08);box-shadow:var(--shadow-sm);transition:transform .2s,box-shadow .2s}
+.card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.card .card-label{font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:.4rem}
+.card .card-value{font-family:var(--serif);font-size:1.5rem;color:var(--text-primary);font-weight:400}
+.card .card-value.accent{color:var(--accent)}
+.card .card-sub{font-size:.78rem;color:var(--text-dim);margin-top:.2rem}
+
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin-top:2.5rem}
+
+/* Pipeline */
+.pipeline{display:flex;flex-direction:column;gap:0;margin-top:2.5rem;position:relative}
+.pipeline-step{display:grid;grid-template-columns:1fr auto 1fr;gap:0;align-items:start}
+.pipeline-step .step-content{background:var(--bg-card);border-radius:14px;padding:1.5rem 1.8rem;border:1px solid rgba(27,108,168,.08);box-shadow:var(--shadow-sm)}
+.pipeline-step .step-num{font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;color:var(--accent);text-transform:uppercase;margin-bottom:.6rem}
+.pipeline-step .step-title{font-weight:500;font-size:.98rem;margin-bottom:.4rem}
+.pipeline-step .step-desc{font-size:.82rem;color:var(--text-secondary);line-height:1.6}
+.pipeline-step .step-arrow{width:48px;display:flex;flex-direction:column;align-items:center;padding-top:1.8rem;gap:.3rem;flex-shrink:0}
+.pipeline-step .step-arrow span{font-family:var(--mono);font-size:.65rem;color:var(--text-dim)}
+.pipeline-step .step-line{flex:1;width:1px;background:linear-gradient(to bottom,rgba(27,108,168,.2),rgba(45,173,124,.2));min-height:40px}
+@media(max-width:700px){.pipeline-step{grid-template-columns:1fr}.pipeline-step .step-arrow{display:none}}
+
+/* Code */
+pre{background:#1a2332;border-radius:12px;padding:1.5rem 1.8rem;overflow-x:auto;font-family:var(--mono);font-size:.82rem;line-height:1.7;color:#e2e8f0;margin:1.5rem 0}
+pre .comment{color:#6b7c99}
+pre .keyword{color:#7dd3fc}
+pre .string{color:#86efac}
+pre .func{color:#fcd34d}
+code{font-family:var(--mono);font-size:.85em;background:rgba(27,108,168,.07);color:var(--accent-bright);padding:.15em .4em;border-radius:4px}
+pre code{background:none;color:inherit;padding:0;font-size:inherit}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.85rem}
+th{text-align:left;padding:.6rem 1rem;background:var(--bg-surface);border-bottom:2px solid rgba(27,108,168,.1);font-family:var(--mono);font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-dim)}
+td{padding:.6rem 1rem;border-bottom:1px solid rgba(27,108,168,.05);vertical-align:top}
+tr:last-child td{border-bottom:none}
+
+/* Highlight boxes */
+.highlight-box{background:rgba(27,108,168,.04);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;padding:1rem 1.2rem;margin:1.2rem 0;font-size:.88rem;color:var(--text-secondary)}
+.warning-box{background:rgba(232,140,48,.06);border-left:3px solid var(--accent-warn);border-radius:0 8px 8px 0;padding:1rem 1.2rem;margin:1.2rem 0;font-size:.88rem;color:var(--text-secondary)}
+.success-box{background:rgba(45,173,124,.06);border-left:3px solid var(--accent-2);border-radius:0 8px 8px 0;padding:1rem 1.2rem;margin:1.2rem 0;font-size:.88rem;color:var(--text-secondary)}
+
+/* Divider */
+.step-divider{width:1px;background:linear-gradient(to bottom,var(--accent),var(--accent-2));margin:.5rem auto;height:40px}
+
+/* Cost cards */
+.cost-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.2rem;margin-top:2.5rem}
+.cost-card{background:var(--bg-card);border-radius:14px;padding:1.5rem 1.8rem;border:1px solid rgba(27,108,168,.08);box-shadow:var(--shadow-sm)}
+.cost-card h4{font-size:.85rem;font-weight:500;margin-bottom:.8rem;color:var(--accent);font-family:var(--mono);letter-spacing:.05em;text-transform:uppercase}
+.cost-card ul{list-style:none;display:flex;flex-direction:column;gap:.5rem}
+.cost-card li{font-size:.85rem;color:var(--text-secondary);padding-left:1rem;position:relative}
+.cost-card li::before{content:'→';position:absolute;left:0;color:var(--accent-2);font-size:.75rem}
+
+/* Quote */
+blockquote{border-left:3px solid var(--accent);padding:.8rem 1.5rem;margin:1.5rem 0;background:rgba(27,108,168,.04);border-radius:0 12px 12px 0;font-family:var(--serif);font-size:1.15rem;font-style:italic;color:var(--text-primary);line-height:1.6}
+blockquote cite{display:block;font-size:.78rem;color:var(--text-dim);margin-top:.5rem;font-style:normal;font-family:var(--sans)}
+
+/* Footer */
+footer{padding:3rem clamp(1.5rem,5vw,4rem);border-top:1px solid rgba(27,108,168,.07);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;max-width:var(--wide-w);margin:0 auto}
+footer p{font-size:.78rem;color:var(--text-dim)}
+footer a{color:var(--accent);text-decoration:none}
+footer a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="scroll-progress"></div>
+
+<script>
+window.addEventListener('scroll',()=>{
+  const scrollTop=document.documentElement.scrollTop;
+  const scrollHeight=document.documentElement.scrollHeight-document.documentElement.clientHeight;
+  document.querySelector('.scroll-progress').style.width=(scrollTop/scrollHeight*100)+'%';
+});
+</script>
+
+<!-- Navigation -->
+<nav>
+  <a href="#" class="nav-brand">One-Person Pharma</a>
+  <ul class="nav-links">
+    <li><a href="#pipeline">链路</a></li>
+    <li><a href="#drylab">干端</a></li>
+    <li><a href="#wetlab">湿端</a></li>
+    <li><a href="#closedloop">闭环</a></li>
+    <li><a href="#cost">成本</a></li>
+    <li><a href="#start">动手</a></li>
+  </ul>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-content">
+    <div class="hero-label">Executable Agent Skill · 2025</div>
+    <h1 class="hero-title">一台电脑，<em>一人AI药企</em></h1>
+    <p class="hero-sub">2025年，一个人坐在咖啡馆里，用一台笔记本，可以完成过去需要一支20人团队、一间湿实验室、数千万资金才能做到的事情。这不是科幻小说，这是现在正在发生的事。</p>
+    <div class="hero-buttons">
+      <a href="https://github.com/hgbrian/biomodals" class="btn btn-primary" target="_blank">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        biomodals
+      </a>
+      <a href="https://agents.adaptyvbio.com" class="btn btn-secondary" target="_blank">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Adaptyv Bio
+      </a>
+    </div>
+    <div class="hero-stats">
+      <div class="stat-card">
+        <div class="stat-num">$5</div>
+        <div class="stat-label">干端/轮</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num green">$582</div>
+        <div class="stat-label">湿端/5条</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num orange">21天</div>
+        <div class="stat-label">周转时间</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">~$1.7K</div>
+        <div class="stat-label">3轮总预算</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Section 1: Analogy -->
+<section class="section" id="intro">
+  <div class="section-num-wrapper">
+    <div class="section-num">01</div>
+  </div>
+  <div class="section-label">一个不可思议的比喻</div>
+  <h2 class="section-title">AWS 效应正在生物学领域重演</h2>
+
+  <p class="section-sub">2006年，亚马逊推出AWS。在此之前，一家互联网公司要上线，必须先买服务器、租机房、雇运维，光基础设施就能烧掉几百万。AWS出现之后，一个程序员花几十美元就能租到算力，当天部署，隔天上线。互联网的创业门槛，在一夜之间坍塌了。</p>
+
+  <p style="margin-top:1.5rem;font-size:1rem;color:var(--text-secondary);line-height:1.7;max-width:58ch">2025年，同样的事情正在生物学领域发生。只不过这一次，"服务器"变成了GPU云，"代码跑通"变成了蛋白质序列设计，"部署上线"变成了向自动化实验室下单做湿实验。整条链路，一个人，一台电脑，就能走完。</p>
+
+  <blockquote style="margin-top:2.5rem">
+    只不过这一次，"服务器"变成了GPU云，"代码跑通"变成了蛋白质序列设计，"部署上线"变成了向自动化实验室下单做湿实验。
+  </blockquote>
+</section>
+
+<!-- Section 2: Pipeline -->
+<section class="section" id="pipeline">
+  <div class="section-num-wrapper">
+    <div class="section-num">02</div>
+  </div>
+  <div class="section-label">这条链路究竟长什么样</div>
+  <h2 class="section-title">从靶点到候选序列，全链路拆解</h2>
+  <p class="section-sub">传统药物研发周期长、投入大，但聚焦到蛋白质/抗体的从头设计与早期验证，链路可以被大幅压缩。</p>
+
+  <div class="pipeline" style="margin-top:2.5rem">
+    <div class="pipeline-step">
+      <div></div>
+      <div class="step-arrow"><div class="step-line"></div><span>1</span><div class="step-line"></div></div>
+      <div class="step-content">
+        <div class="step-num">Step 01</div>
+        <div class="step-title">靶点结构获取</div>
+        <div class="step-desc">从PDB下载靶点三维结构文件，或从AlphaFold DB获取预测结构。</div>
+        <pre><code>wget https://files.rcsb.org/download/5JDS.pdb</code></pre>
+      </div>
+    </div>
+
+    <div class="step-divider"></div>
+
+    <div class="pipeline-step">
+      <div></div>
+      <div class="step-arrow"><div class="step-line"></div><span>2</span><div class="step-line"></div></div>
+      <div class="step-content">
+        <div class="step-num">Step 02</div>
+        <div class="step-title">AI计算设计层（Modal云GPU）</div>
+        <div class="step-desc">de novo结构生成 → 序列优化 → 计算打分筛选。工具包括BindCraft、RFdiffusion、Chai-1、AF2Rank等。</div>
+        <pre><code>GPU=A100 uvx modal run modal_bindcraft.py \
+  --input-pdb 5JDS.pdb --number-of-final-designs 5</code></pre>
+      </div>
+    </div>
+
+    <div class="step-divider"></div>
+
+    <div class="pipeline-step">
+      <div></div>
+      <div class="step-arrow"><div class="step-line"></div><span>3</span><div class="step-line"></div></div>
+      <div class="step-content">
+        <div class="step-num">Step 03</div>
+        <div class="step-title">自动化湿实验层（Adaptyv Bio API）</div>
+        <div class="step-desc">蛋白质合成 → 表达检测 → 结合亲和力测定（BLI/SPR）。真实实验数据反馈到设计端。</div>
+        <pre><code>experiment = client.experiments.create(
+    assay_type="binding",
+    target_id="comp-pdl1-human",
+    sequences=[...])</code></pre>
+      </div>
+    </div>
+
+    <div class="step-divider"></div>
+
+    <div class="pipeline-step">
+      <div></div>
+      <div class="step-arrow"><div class="step-line"></div><span>4</span><div class="step-line"></div></div>
+      <div class="step-content">
+        <div class="step-num">Step 04</div>
+        <div class="step-title">结果反馈 → 设计迭代</div>
+        <div class="step-desc">Kd、kon、koff数据 → 指导下一轮设计迭代。干湿闭环，循环往复。</div>
+        <pre><code># 纳摩尔级Kd = 命中
+kd &lt; 1e-8  # → 进入下一轮优化</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="highlight-box" style="margin-top:2.5rem">
+    每一层都已经有现成的基础设施可以调用。而且，它们之间可以用代码打通。
+  </div>
+</section>
+
+<!-- Section 3: Dry Lab -->
+<section class="section" id="drylab">
+  <div class="section-num-wrapper">
+    <div class="section-num">03</div>
+  </div>
+  <div class="section-label">干端</div>
+  <h2 class="section-title">Modal + biomodals，把超算放进终端</h2>
+
+  <p class="section-sub">Modal是一个面向AI/ML工作流的云计算平台——你写一个Python函数加装饰器，它帮你在云端GPU上运行，按秒计费。biomodals则把主流生物计算工具全部打包成可以一键调用的Modal脚本。</p>
+
+  <div class="cards-grid">
+    <div class="card">
+      <div class="card-label">AlphaFold</div>
+      <div class="card-value">结构预测</div>
+      <div class="card-sub">蛋白质三维结构预测</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Boltz-1</div>
+      <div class="card-value accent">AF3级别</div>
+      <div class="card-sub">开源结构预测（开源）</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Chai-1</div>
+      <div class="card-value">复合物预测</div>
+      <div class="card-sub">多链复合物预测</div>
+    </div>
+    <div class="card">
+      <div class="card-label">RFdiffusion</div>
+      <div class="card-value">$1/次</div>
+      <div class="card-sub">骨架扩散生成</div>
+    </div>
+    <div class="card">
+      <div class="card-label">BindCraft</div>
+      <div class="card-value">$2-4/3个</div>
+      <div class="card-sub">端到端binder设计</div>
+    </div>
+    <div class="card">
+      <div class="card-label">RFantibody</div>
+      <div class="card-value">$2/次</div>
+      <div class="card-sub">抗体CDR设计</div>
+    </div>
+    <div class="card">
+      <div class="card-label">IgGM</div>
+      <div class="card-value">$1-2/次</div>
+      <div class="card-sub">VHH/纳米抗体设计</div>
+    </div>
+    <div class="card">
+      <div class="card-label">AF2Rank</div>
+      <div class="card-value">ipSAE打分</div>
+      <div class="card-sub">基于AF2的结合得分</div>
+    </div>
+  </div>
+
+  <div style="margin-top:2.5rem">
+    <h3 style="font-size:.95rem;font-weight:500;margin-bottom:1rem;color:var(--accent)">完整工作流示例：PD-L1 Binder设计</h3>
+    <pre><code># 1. 下载靶点结构
+wget https://files.rcsb.org/download/5JDS.pdb
+
+# 2. BindCraft从头设计（约1小时，$3）
+GPU=A100 uvx modal run modal_bindcraft.py \
+  --input-pdb 5JDS.pdb --number-of-final-designs 5
+
+# 3. 用Chai-1做复合物结构预测
+uvx modal run modal_chai1.py --input-faa designs_complex.faa
+
+# 4. 用AF2Rank计算ipSAE得分
+uvx modal run modal_af2rank.py --input-pdb out/bindcraft/design_001.pdb
+
+# 5. 筛选top候选序列
+python filter_designs.py --min-iptm 0.7 --max-ipae 10 --output candidates.fasta</code></pre>
+
+    <div class="success-box">几个小时，几美元，你手里就有了一批计算上"看起来能结合"的候选序列。下一步，就是把它们送去真正的实验室验证。</div>
+  </div>
+</section>
+
+<!-- Section 4: Wet Lab -->
+<section class="section" id="wetlab">
+  <div class="section-num-wrapper">
+    <div class="section-num">04</div>
+  </div>
+  <div class="section-label">湿端</div>
+  <h2 class="section-title">Adaptyv Bio，把实验室变成API</h2>
+
+  <blockquote>
+    把蛋白质实验室变成一个可编程的API。你上传序列，它帮你合成蛋白质、跑实验、返回数据。不需要实验室，不需要招人，不需要买仪器。
+    <cite>— Adaptyv Bio，2025年完成$800万种子轮</cite>
+  </blockquote>
+
+  <div class="cards-grid" style="margin-top:2.5rem">
+    <div class="card">
+      <div class="card-label">Targets</div>
+      <div class="card-value">靶点目录</div>
+      <div class="card-sub">EGFR、HER2、PD-L1、IL-7Rα等</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Sequences</div>
+      <div class="card-value">序列提交</div>
+      <div class="card-sub">REST API批量提交</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Experiments</div>
+      <div class="card-value">实验管理</div>
+      <div class="card-sub">创建并追踪进度</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Results</div>
+      <div class="card-value">Kd/kon/koff</div>
+      <div class="card-sub">真实动力学参数</div>
+    </div>
+  </div>
+
+  <div style="margin-top:2.5rem;background:var(--bg-card);border-radius:14px;padding:1.5rem 1.8rem;border:1px solid rgba(27,108,168,.08)">
+    <div class="card-label" style="margin-bottom:1rem">返回数据格式示例（结合assay）</div>
+    <pre><code>{
+  "sequence_name": "VHH-01",
+  "target_name": "HER2 / ERBB2",
+  "kd": 8.1e-10,        // 真实KD值，单位M
+  "kd_units": "M",
+  "kon": 2400000,       // on-rate (M^-1 s^-1)
+  "koff": 0.0019,        // off-rate (s^-1)
+  "binding_strength": "strong",
+  "r_squared": 0.999    // 拟合质量
+}</code></pre>
+  </div>
+
+  <div class="cost-grid" style="margin-top:2rem">
+    <div class="cost-card">
+      <h4>定价参考</h4>
+      <ul>
+        <li>Assay费用：$99/条序列</li>
+        <li>材料费：约$17.49/条序列</li>
+        <li>5条序列一批：约$582</li>
+        <li>周转时间：21天</li>
+      </ul>
+    </div>
+    <div class="cost-card">
+      <h4>可用靶点</h4>
+      <ul>
+        <li>EGFR（表皮生长因子受体）</li>
+        <li>HER2/ERBB2（乳腺癌靶点）</li>
+        <li>PD-L1（免疫检查点）</li>
+        <li>IL-7Rα（免疫调节）</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="margin-top:2rem">
+    <h3 style="font-size:.95rem;font-weight:500;margin-bottom:1rem;color:var(--accent)">Python SDK下单</h3>
+    <pre><code>from adaptyv_sdk import AdaptyvClient
+import os
+
+client = AdaptyvClient(api_key=os.environ["ADAPTYV_API_KEY"])
+
+# 查看可用靶点
+targets = client.targets.list(search="EGFR", selfservice_only=True)
+target_id = targets[0].id
+
+# 提交序列做结合assay
+experiment = client.experiments.create(
+    assay_type="binding",
+    target_id=target_id,
+    sequences=[
+        {"name": "design_001", "sequence": "QVQLVESGG..."},
+        {"name": "design_002", "sequence": "EVQLVESGG..."},
+    ]
+)
+print(f"实验编号：{experiment.experiment_code}")
+
+# 21天后取回数据
+results = client.results.list(experiment_id=experiment.id)
+for r in results:
+    print(f"{r.sequence_name}: Kd = {r.kd:.2e} M ({r.binding_strength})")</code></pre>
+  </div>
+</section>
+
+<!-- Section 5: Closed Loop -->
+<section class="section" id="closedloop">
+  <div class="section-num-wrapper">
+    <div class="section-num">05</div>
+  </div>
+  <div class="section-label">干湿闭环</div>
+  <h2 class="section-title">把两端接起来</h2>
+  <p class="section-sub">当干端（Modal设计）和湿端（Adaptyv实验）都可以被代码调用，它们之间的"闭环"就不再是隐喻，而是真实可以运行的pipeline。</p>
+
+  <pre style="margin-top:2rem"><code>import modal
+from adaptyv_sdk import AdaptyvClient
+import time
+
+# ---- 配置 ----
+TARGET_PDB = "5JDS.pdb"           # PD-L1结构
+TARGET_ID = "comp-pdl1-human"     # Adaptyv靶点ID
+DESIGNS_PER_ROUND = 5             # 每轮设计候选数
+MAX_ROUNDS = 3                    # 最大迭代轮次
+KD_THRESHOLD = 1e-8                # 目标亲和力（10 nM）
+
+client = AdaptyvClient(api_key=os.environ["ADAPTYV_API_KEY"])
+
+# ---- 主循环 ----
+best_kd = float("inf")
+best_sequence = None
+
+for round_num in range(1, MAX_ROUNDS + 1):
+    print(f"\n===== 第 {round_num} 轮设计 =====")
+
+    # 干端：生成候选序列（Modal上跑BindCraft）
+    candidates = run_design_round(TARGET_PDB, round_num)
+
+    # 湿端：提交实验
+    exp_id = submit_to_adaptyv(candidates)
+
+    # 等待21天取结果
+    results = wait_for_results(exp_id)
+
+    # 分析结果
+    hits = [r for r in results if r.kd and r.kd < KD_THRESHOLD]
+    print(f"命中（Kd &lt; {KD_THRESHOLD:.0e} M）：{len(hits)}/{len(results)} 条")
+
+    if hits:
+        best_hit = min(hits, key=lambda r: r.kd)
+        best_kd = best_hit.kd
+        best_sequence = best_hit.sequence
+
+    if best_kd &lt; KD_THRESHOLD:
+        print(f"\n目标达成！最优Kd = {best_kd:.2e} M")
+        break
+
+print(f"\n最终候选序列：\n{best_sequence}")</code></pre>
+
+  <div class="highlight-box" style="margin-top:1.5rem">
+    当然，实际使用中你会加上更多的计算筛选步骤（可开发性预测、脱靶风险、免疫原性评估），但骨架就是这样——一个真实运行的、干湿闭环的蛋白质设计迭代系统。
+  </div>
+</section>
+
+<!-- Section 6: Cost -->
+<section class="section" id="cost">
+  <div class="section-num-wrapper">
+    <div class="section-num">06</div>
+  </div>
+  <div class="section-label">现实检验</div>
+  <h2 class="section-title">这条路的真实成本</h2>
+
+  <div class="cost-grid">
+    <div class="cost-card">
+      <h4>干端（计算设计）</h4>
+      <ul>
+        <li>骨架生成（5个设计）— BindCraft on A100：~$3 / 1小时</li>
+        <li>结构预测验证 — Chai-1 on L40S：~$1 / 20分钟</li>
+        <li>打分评估 — AF2Rank：~$0.5 / 10分钟</li>
+        <li>一轮完整流程：约$5 / 约2小时</li>
+      </ul>
+    </div>
+    <div class="cost-card">
+      <h4>湿端（实验验证）</h4>
+      <ul>
+        <li>每条序列assay费：$99</li>
+        <li>每条序列材料费：~$17</li>
+        <li>每条序列合计：~$116</li>
+        <li>典型批量（5条）：~$582</li>
+        <li>周转时间：21天</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="margin-top:2.5rem;background:var(--bg-card);border-radius:14px;padding:2rem 2.5rem;border:1px solid rgba(27,108,168,.08);text-align:center">
+    <div class="section-label" style="margin-bottom:.5rem;text-align:left">三轮迭代总预算</div>
+    <div style="display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:1rem;align-items:center;text-align:center;margin-top:1rem">
+      <div>
+        <div style="font-family:var(--serif);font-size:1.8rem;color:var(--accent)">$15</div>
+        <div style="font-size:.78rem;color:var(--text-dim);margin-top:.3rem">干端（3轮×$5）</div>
+      </div>
+      <div style="font-size:1.5rem;color:var(--text-dim)">+</div>
+      <div>
+        <div style="font-family:var(--serif);font-size:1.8rem;color:var(--accent)">$1,746</div>
+        <div style="font-size:.78rem;color:var(--text-dim);margin-top:.3rem">湿端（3轮×5条）</div>
+      </div>
+      <div style="font-size:1.5rem;color:var(--text-dim)">=</div>
+      <div>
+        <div style="font-family:var(--serif);font-size:2.2rem;color:var(--accent-2)">~$1,761</div>
+        <div style="font-size:.78rem;color:var(--text-dim);margin-top:.3rem">总计</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="success-box" style="margin-top:2rem">
+    不到两千美元，三轮计算-实验迭代，找到一个纳摩尔级别结合的候选序列。相比之下，传统CRO做同样的工作，光报价就不一定报出来，周期往往是6-12个月。
+  </div>
+
+  <div style="margin-top:2rem">
+    <h3 style="font-size:.95rem;font-weight:500;margin-bottom:1rem;color:var(--accent)">Modal免费层</h3>
+    <p style="font-size:.88rem;color:var(--text-secondary)">Modal每月$30免费额度，大约可以支撑6轮完整设计迭代——对个人研究者来说相当充裕。</p>
+  </div>
+</section>
+
+<!-- Section 7: Business -->
+<section class="section" id="biz">
+  <div class="section-num-wrapper">
+    <div class="section-num">07</div>
+  </div>
+  <div class="section-label">商业视角</div>
+  <h2 class="section-title">这开启了什么</h2>
+
+  <p class="section-sub" style="margin-bottom:1.5rem">这套基础设施最直接的含义是：<strong>创业门槛被大幅压低了。</strong></p>
+
+  <div class="cards-grid">
+    <div class="card">
+      <div class="card-label">过去</div>
+      <div class="card-value" style="color:var(--accent-warn)">≥500万</div>
+      <div class="card-sub">A轮前：实验室+仪器+团队</div>
+    </div>
+    <div class="card">
+      <div class="card-label">现在</div>
+      <div class="card-value accent">$30/月起</div>
+      <div class="card-sub">Modal计算 + Adaptyv按需实验</div>
+    </div>
+  </div>
+
+  <div style="margin-top:2.5rem">
+    <h3 style="font-size:.95rem;font-weight:500;margin-bottom:.8rem;color:var(--accent)">未来可能出现的商业形态</h3>
+    <ul style="list-style:none;display:flex;flex-direction:column;gap:.8rem;margin-top:1rem">
+      <li style="padding:1rem 1.2rem;background:var(--bg-card);border-radius:10px;border:1px solid rgba(27,108,168,.08);font-size:.88rem;color:var(--text-secondary)">
+        <strong style="color:var(--text-primary)">计算驱动的"虚拟CRO"</strong><br>没有自己的实验室，但能承接客户的从头设计任务，外包给Adaptyv做验证
+      </li>
+      <li style="padding:1rem 1.2rem;background:var(--bg-card);border-radius:10px;border:1px solid rgba(27,108,168,.08);font-size:.88rem;color:var(--text-secondary)">
+        <strong style="color:var(--text-primary)">AI蛋白质设计工作室</strong><br>专注特定靶点类型（如PD-1/PD-L1通路），积累设计know-how，卖序列或数据
+      </li>
+      <li style="padding:1rem 1.2rem;background:var(--bg-card);border-radius:10px;border:1px solid rgba(27,108,168,.08);font-size:.88rem;color:var(--text-secondary)">
+        <strong style="color:var(--text-primary)">闭环模型训练服务</strong><br>帮客户跑干湿闭环、产生高质量结构-活性数据，喂给客户的内部模型
+      </li>
+    </ul>
+  </div>
+
+  <div class="warning-box" style="margin-top:2.5rem">
+    <strong style="display:block;margin-bottom:.5rem;color:var(--accent-warn)">当前局限性</strong>
+    <ul style="list-style:none;display:flex;flex-direction:column;gap:.4rem;font-size:.85rem">
+      <li>• Adaptyv自助服务靶点有限，主要集中在热门靶点</li>
+      <li>• 湿实验周期仍然是21天，干端几小时出结果，湿端3周等数据</li>
+      <li>• assay类型有限（主要是结合assay），细胞功能实验覆盖不到</li>
+      <li>• Adaptyv在瑞士，国内支付、合规需要额外处理</li>
+      <li>• 这条路适合早期筛选，选择性、PK/PD、安全性等还需要传统路径</li>
+    </ul>
+  </div>
+</section>
+
+<!-- Section 8: Getting Started -->
+<section class="section" id="start">
+  <div class="section-num-wrapper">
+    <div class="section-num">08</div>
+  </div>
+  <div class="section-label">动手</div>
+  <h2 class="section-title">五分钟开始你的第一个实验</h2>
+
+  <div style="margin-top:2.5rem;display:flex;flex-direction:column;gap:1.5rem">
+
+    <div style="background:var(--bg-card);border-radius:14px;padding:1.5rem 1.8rem;border:1px solid rgba(27,108,168,.08)">
+      <div class="step-num" style="margin-bottom:.8rem">第一步 · 环境准备（10分钟）</div>
+      <pre><code># 安装uv（Python包管理器）
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# 注册Modal账号，获得$30免费额度
+python -m modal setup
+
+# 安装Adaptyv SDK
+pip install adaptyv-sdk</code></pre>
+    </div>
+
+    <div style="background:var(--bg-card);border-radius:14px;padding:1.5rem 1.8rem;border:1px solid rgba(27,108,168,.08)">
+      <div class="step-num" style="margin-bottom:.8rem">第二步 · 克隆biomodals（1分钟）</div>
+      <pre><code>git clone https://github.com/hgbrian/biomodals
+cd biomodals</code></pre>
+    </div>
+
+    <div style="background:var(--bg-card);border-radius:14px;padding:1.5rem 1.8rem;border:1px solid rgba(27,108,168,.08)">
+      <div class="step-num" style="margin-bottom:.8rem">第三步 · 跑第一个蛋白质折叠（5分钟，免费）</div>
+      <pre><code># 下载一个经典抗原
+wget https://files.rcsb.org/download/1YWI.pdb
+
+# 用AF2Rank打分
+uvx modal run modal_af2rank.py --input-pdb 1YWI.pdb --run-name test</code></pre>
+    </div>
+
+    <div style="background:var(--bg-card);border-radius:14px;padding:1.5rem 1.8rem;border:1px solid rgba(27,108,168,.08)">
+      <div class="step-num" style="margin-bottom:.8rem">第四步 · 设计一个binder（1小时，约$3）</div>
+      <pre><code># 下载PD-L1结构（只保留A链）
+wget https://files.rcsb.org/download/5JDS.pdb
+grep "^ATOM.* A " 5JDS.pdb > 5JDS_chainA.pdb
+
+# 跑BindCraft
+GPU=A100 uvx modal run modal_bindcraft.py \
+  --input-pdb 5JDS_chainA.pdb --number-of-final-designs 3</code></pre>
+    </div>
+
+    <div style="background:var(--bg-card);border-radius:14px;padding:1.5rem 1.8rem;border:1px solid rgba(27,108,168,.08)">
+      <div class="step-num" style="margin-bottom:.8rem">第五步 · 申请Adaptyv API token</div>
+      <p style="font-size:.88rem;color:var(--text-secondary)">访问 <code>foundry.adaptyvbio.com</code>，注册账号获取API token。在下单前，可以先用免费的竞赛（如Nipah binder competition）练手。</p>
+    </div>
+  </div>
+</section>
+
+<!-- Section 9: Closing -->
+<section class="section" id="close">
+  <div class="section-num-wrapper">
+    <div class="section-num">09</div>
+  </div>
+  <div class="section-label">尾声</div>
+  <h2 class="section-title">这是一个什么样的时刻</h2>
+
+  <blockquote style="margin-top:2rem">
+    2024年，Adaptyv举办了一场EGFR binder设计竞赛，150多个参赛者提交了超过1800个设计，Adaptyv在实验室测了其中601个。第一轮命中率2.5%，两个月后第二轮提升到13%。
+    <cite>— 这场竞赛里，排名最靠前的参赛者，用的就是这套工具——Modal跑计算，Adaptyv做验证，一个人在电脑前。</cite>
+  </blockquote>
+
+  <p class="section-sub" style="margin-top:2rem">这不是说个人研究者要去跟大药企竞争。药物研发的后半段，临床、法规、商业化，不是工具能解决的。</p>
+
+  <p style="margin-top:1.5rem;font-size:1rem;color:var(--text-secondary);line-height:1.7;max-width:58ch">但这意味着：<strong style="color:var(--text-primary)">在药物研发最昂贵、最慢的早期探索阶段，个体的力量第一次变得可以和机构抗衡。</strong></p>
+
+  <div class="success-box" style="margin-top:2rem;font-size:1rem;line-height:1.7">
+    就像GitHub让一个人可以维护一个被全球数百万开发者使用的开源项目，这套基础设施让一个人可以真正意义上地"研发"一个蛋白质候选分子。一台电脑，一张信用卡，一人药企，不再是隐喻。
+  </div>
+</section>
+
+<!-- References -->
+<section class="section" style="padding-top:0">
+  <div class="section-label">参考资源</div>
+  <div style="margin-top:1.5rem;background:var(--bg-card);border-radius:14px;padding:1.5rem 1.8rem;border:1px solid rgba(27,108,168,.08)">
+    <table>
+      <thead><tr><th>资源</th><th>链接</th></tr></thead>
+      <tbody>
+        <tr><td>biomodals仓库</td><td><code>github.com/hgbrian/biomodals</code></td></tr>
+        <tr><td>Boolean Biotech博客</td><td><code>blog.booleanbiotech.com</code></td></tr>
+        <tr><td>Adaptyv Foundry API文档</td><td><code>docs.adaptyvbio.com</code></td></tr>
+        <tr><td>Adaptyv AI Agents页面</td><td><code>agents.adaptyvbio.com</code></td></tr>
+        <tr><td>Adaptyv EGFR竞赛总结预印本</td><td><code>biorxiv.org/content/10.1101/2025.04.17.648362</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>
+  <p>© 2025 · 一台电脑，一人AI药企</p>
+  <p>Built with <a href="https://github.com/hgbrian/biomodals" target="_blank">biomodals</a> + <a href="https://agents.adaptyvbio.com" target="_blank">Adaptyv Bio</a></p>
+</footer>
+
+</body>
+</html>
